@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gerenciador + Dashboard (Single File)</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- CSS externo -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>To Do List 📝</h1>
+      <p>Gerenciamento de demandas — Gabriel</p>
+    </div>
+
+    <div class="nav-actions">
+      <button id="openAppBtn" class="btn ghost" title="Voltar para app">Lista</button>
+      <button id="openDashboardBtn" class="btn" title="Abrir dashboards">📊 Dashboard</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- APP VIEW -->
+    <section id="appView" class="view active">
+      <div class="card">
+        <h2 style="margin:0 0 10px">➕ Cadastrar / Editar Demanda</h2>
+        <form id="demandForm" autocomplete="off">
+          <div class="row">
+            <div>
+              <label for="title">Título</label>
+              <input id="title" type="text" required />
+            </div>
+            <div>
+              <label for="type">Tipo</label>
+              <select id="type" required>
+                <option value="rotina">Rotina Diária</option>
+                <option value="esporadica">Esporádica</option>
+              </select>
+            </div>
+            <div>
+              <label for="received">Data e Hora de Chegada</label>
+              <input id="received" type="datetime-local" required />
+            </div>
+          </div>
+
+          <div style="margin-top:10px">
+            <label for="description">Descrição</label>
+            <textarea id="description" required></textarea>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+            <button type="submit" class="btn">Adicionar</button>
+            <button type="button" id="cancelEditBtn" style="display:none" class="btn ghost">Cancelar edição</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 10px">📋 Demandas</h2>
+
+        <div class="filters" id="filters">
+          <button class="filter-btn active" data-filter="all">Todos</button>
+          <button class="filter-btn" data-filter="pending">Pendentes</button>
+          <button class="filter-btn" data-filter="completed">Concluídas</button>
+          <button class="filter-btn" data-filter="rotina">Rotinas</button>
+          <button class="filter-btn" data-filter="esporadica">Esporádicas</button>
+        </div>
+
+        <div id="grid" class="grid"></div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD VIEW -->
+    <section id="dashboardView" class="view">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h2 style="margin:0">📊 Dashboards</h2>
+          <div style="color:var(--muted);font-size:0.95rem">
+            Total de demandas: <strong id="totalCount">0</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="card">
+          <h3 style="margin-top:0">Status (Concluídas × Pendentes)</h3>
+          <canvas id="statusChart"></canvas>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-top:0">Tipos (Rotina × Esporádica)</h3>
+          <canvas id="typeChart"></canvas>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-top:0">Horas totais por tipo (h)</h3>
+          <canvas id="hoursChart"></canvas>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal para comentário ao concluir -->
+  <div id="overlay" class="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h3 id="modalTitle">Registrar comentário de conclusão</h3>
+      <p style="margin:6px 0;color:var(--muted);font-size:0.95rem">Escreva um comentário que ficará gravado com a tarefa.</p>
+      <textarea id="completeComment" placeholder="Comentário (obrigatório)"></textarea>
+      <div class="row">
+        <button id="cancelComplete" class="btn ghost">Cancelar</button>
+        <button id="confirmComplete" class="btn">Confirmar e finalizar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS externo -->
+  <script src="app.js"></script>
+</body>
+</html>
