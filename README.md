@@ -2,6 +2,10 @@
 
 Um gerenciador de tarefas minimalista em página única (Single Page App), feito apenas com HTML, CSS e JavaScript puro. Ideal para estudos de manipulação do DOM, armazenamento no navegador e boas práticas de organização em projetos front-end sem frameworks (Sem custos)
 
+Neste repositório temos dois modais onde (Pasta taskflow contem o projeto com os arquivos individuais e um arquivo final único HTML com o projeto todo encapsulado em um único arquivo HTML)
+
+Este repositório contém dois modais: a pasta 'taskflow' reúne os arquivos individuais do projeto, e na raiz temos um HTML final que encapsula todo o conteúdo em um único documento (esse último por sua vez está longe de ser uma boa prática de desenvolvimento)
+
 
 # TaskFlow Lite ✅
 
