@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gerenciador + Dashboard (Single File)</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root{
+      --primary:#4CAF50;
+      --primary-dark:#43A047;
+      --accent:#2196F3;
+      --accent-dark:#1976D2;
+      --bg:#f0f2f5;
+      --card:#fff;
+      --text:#222;
+      --muted:#666;
+      --danger:#dc3545;
+      --shadow: rgba(0,0,0,0.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: "Roboto", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial;
+      background:var(--bg);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+    }
+
+    header{
+      background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+      color:#fff;
+      padding:18px 16px;
+      position:relative;
+      box-shadow:0 4px 10px var(--shadow);
+      display:flex;
+      align-items:center;
+      gap:12px;
+      justify-content:space-between;
+    }
+    header .brand{
+      display:flex;flex-direction:column;
+    }
+    header h1{font-family:'Poppins',sans-serif;margin:0;font-size:1.2rem}
+    header p{margin:2px 0 0;font-size:0.86rem;opacity:0.95}
+
+    .nav-actions{display:flex;gap:8px;align-items:center}
+    .btn{
+      background:var(--accent);
+      color:#fff;
+      border:none;
+      padding:8px 12px;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:600;
+      text-decoration:none;
+    }
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.18)}
+    .btn.secondary{background:var(--primary-dark)}
+
+    main{
+      max-width:1100px;
+      margin:20px auto;
+      padding:0 16px 60px;
+    }
+
+    /* Views */
+    .view{display:none}
+    .view.active{display:block}
+
+    /* Cards */
+    .card{
+      background:var(--card);
+      border-radius:10px;
+      padding:18px;
+      box-shadow:0 6px 20px var(--shadow);
+      margin-bottom:18px;
+    }
+
+    /* form */
+    form .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+    label{display:block;font-size:0.88rem;color:var(--muted);margin-bottom:6px}
+    input[type="text"], textarea, select, input[type="datetime-local"]{
+      width:100%;padding:9px;border-radius:8px;border:1px solid #e6e6e6;font-size:0.95rem;
+      background:#fff;
+    }
+    textarea{min-height:80px;resize:vertical}
+
+    .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+    .filter-btn{padding:6px 12px;border-radius:20px;border:1px solid #eee;background:transparent;cursor:pointer}
+    .filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+    /* grid list */
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+      gap:12px;
+    }
+    .task{
+      padding:12px;border-radius:8px;background:linear-gradient(180deg,#fff,#fbfbfb);
+      box-shadow:0 3px 10px rgba(0,0,0,0.04);
+      display:flex;flex-direction:column;gap:8px;
+    }
+    .task h3{margin:0;font-size:1rem}
+    .meta{font-size:0.85rem;color:var(--muted)}
+    .status{display:inline-block;padding:6px 10px;border-radius:14px;font-weight:700;font-size:0.78rem}
+    .status.pending{background:#e9f7ff;color:var(--accent)}
+    .status.done{background:#eafaf0;color:var(--primary-dark)}
+
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .actions button{padding:8px 10px;border-radius:8px;border:none;cursor:pointer;font-weight:600}
+    .actions .edit{background:var(--accent);color:#fff}
+    .actions .complete{background:var(--primary);color:#fff}
+    .actions .delete{background:var(--danger);color:#fff}
+
+    /* dashboard layout */
+    .dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+    canvas{width:100% !important;height:240px !important}
+
+    /* modal simple */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:60}
+    .overlay.open{display:flex}
+    .modal{background:#fff;padding:16px;border-radius:10px;max-width:520px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,0.2)}
+    .modal h3{margin:0 0 8px}
+    .modal textarea{min-height:90px}
+    .modal .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+
+    @media (max-width:520px){
+      header{padding:12px}
+      .brand h1{font-size:1rem}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>To Do List 📝</h1>
+      <p>Gerenciamento de demandas — Gabriel</p>
+    </div>
+
+    <div class="nav-actions">
+      <button id="openAppBtn" class="btn ghost" title="Voltar para app">Lista</button>
+      <button id="openDashboardBtn" class="btn" title="Abrir dashboards">📊 Dashboard</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- APP VIEW -->
+    <section id="appView" class="view active">
+      <div class="card">
+        <h2 style="margin:0 0 10px">➕ Cadastrar / Editar Demanda</h2>
+        <form id="demandForm" autocomplete="off">
+          <div class="row">
+            <div>
+              <label for="title">Título</label>
+              <input id="title" type="text" required />
+            </div>
+            <div>
+              <label for="type">Tipo</label>
+              <select id="type" required>
+                <option value="rotina">Rotina Diária</option>
+                <option value="esporadica">Esporádica</option>
+              </select>
+            </div>
+            <div>
+              <label for="received">Data e Hora de Chegada</label>
+              <input id="received" type="datetime-local" required />
+            </div>
+          </div>
+
+          <div style="margin-top:10px">
+            <label for="description">Descrição</label>
+            <textarea id="description" required></textarea>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+            <button type="submit" class="btn">Adicionar</button>
+            <button type="button" id="cancelEditBtn" style="display:none" class="btn ghost">Cancelar edição</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 10px">📋 Demandas</h2>
+
+        <div class="filters" id="filters">
+          <button class="filter-btn active" data-filter="all">Todos</button>
+          <button class="filter-btn" data-filter="pending">Pendentes</button>
+          <button class="filter-btn" data-filter="completed">Concluídas</button>
+          <button class="filter-btn" data-filter="rotina">Rotinas</button>
+          <button class="filter-btn" data-filter="esporadica">Esporádicas</button>
+        </div>
+
+        <div id="grid" class="grid"></div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD VIEW -->
+    <section id="dashboardView" class="view">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h2 style="margin:0">📊 Dashboards</h2>
+          <div style="color:var(--muted);font-size:0.95rem">
+            Total de demandas: <strong id="totalCount">0</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="card">
+          <h3 style="margin-top:0">Status (Concluídas × Pendentes)</h3>
+          <canvas id="statusChart"></canvas>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-top:0">Tipos (Rotina × Esporádica)</h3>
+          <canvas id="typeChart"></canvas>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-top:0">Horas totais por tipo (h)</h3>
+          <canvas id="hoursChart"></canvas>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal para comentário ao concluir -->
+  <div id="overlay" class="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h3 id="modalTitle">Registrar comentário de conclusão</h3>
+      <p style="margin:6px 0;color:var(--muted);font-size:0.95rem">Escreva um comentário que ficará gravado com a tarefa.</p>
+      <textarea id="completeComment" placeholder="Comentário (obrigatório)"></textarea>
+      <div class="row">
+        <button id="cancelComplete" class="btn ghost">Cancelar</button>
+        <button id="confirmComplete" class="btn">Confirmar e finalizar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Config ----------
+    const STORAGE_KEY = 'gabrielDemands';
+    // Horário comercial (ajuste se quiser)
+    const WORK_START = { h: 7, m: 12 };
+    const WORK_END   = { h: 17, m: 30 };
+
+    // ---------- Estado ----------
+    let demands = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    let nextId = demands.length ? Math.max(...demands.map(d=>d.id)) + 1 : 1;
+    let currentFilter = 'all';
+    let editingId = null;
+    let pendingCompleteId = null;
+
+    // Chart references
+    let chartStatus = null, chartType = null, chartHours = null;
+
+    // ---------- Utilitários ----------
+    function save(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(demands));
+      updateAll();
+    }
+
+    // calcula horas "úteis" entre start e end considerando WORK_START/END e só dias úteis
+    function calculateWorkHours(startIso, endIso){
+      if(!startIso || !endIso) return 0;
+      const start = new Date(startIso);
+      const end = new Date(endIso);
+      if (end <= start) return 0;
+
+      let totalMs = 0;
+      // iterar por dias
+      let cursor = new Date(start);
+      cursor.setHours(0,0,0,0);
+      const endDay = new Date(end);
+      endDay.setHours(0,0,0,0);
+
+      while(cursor <= endDay){
+        const dayOfWeek = cursor.getDay(); // 0 domingo
+        if(dayOfWeek >= 1 && dayOfWeek <= 5){
+          // construir intervalos de trabalho para esse dia
+          const workStart = new Date(cursor);
+          workStart.setHours(WORK_START.h, WORK_START.m, 0, 0);
+          const workEnd = new Date(cursor);
+          workEnd.setHours(WORK_END.h, WORK_END.m, 0, 0);
+
+          const s = (start > workStart && sameDay(start, cursor)) ? start : workStart;
+          const e = (end < workEnd && sameDay(end, cursor)) ? end : workEnd;
+
+          if(s < e){
+            totalMs += (e - s);
+          }
+        }
+        // próximo dia
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      return totalMs / (1000*60*60); // horas
+    }
+
+    function sameDay(dateA, dayRef){
+      return new Date(dateA).toDateString() === new Date(dayRef).toDateString();
+    }
+
+    function formatDateTime(iso){
+      if(!iso) return '-';
+      try{
+        return new Date(iso).toLocaleString('pt-BR');
+      }catch(e){ return iso; }
+    }
+
+    // ---------- Renders ----------
+    function renderList(){
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      const filtered = demands.filter(d=>{
+        if(currentFilter === 'all') return true;
+        if(currentFilter === 'pending') return !d.completedDate;
+        if(currentFilter === 'completed') return !!d.completedDate;
+        if(currentFilter === 'rotina') return d.type === 'rotina';
+        if(currentFilter === 'esporadica') return d.type === 'esporadica';
+        return true;
+      });
+
+      // ordenar por receivedDate desc
+      filtered.sort((a,b)=> new Date(b.receivedDate) - new Date(a.receivedDate));
+
+      for(const d of filtered){
+        const div = document.createElement('div');
+        div.className = 'task';
+        const isDone = !!d.completedDate;
+        const hours = calculateWorkHours(d.receivedDate, d.completedDate || new Date());
+        div.innerHTML = `
+          <div>
+            <h3>${escapeHtml(d.title)}</h3>
+            <div class="meta"><strong>Tipo:</strong> ${d.type === 'rotina' ? 'Rotina Diária' : 'Esporádica'} • <strong>Chegada:</strong> ${formatDateTime(d.receivedDate)}</div>
+            ${ isDone ? `<div class="meta"><strong>Concluído:</strong> ${formatDateTime(d.completedDate)}</div>` : '' }
+            ${ d.comment ? `<div class="meta"><strong>Comentário:</strong> ${escapeHtml(d.comment)}</div>` : '' }
+            <div style="margin-top:8px"><strong>Horas úteis:</strong> ${hours.toFixed(2)}h</div>
+          </div>
+          <div>
+            <div style="margin-bottom:8px"><span class="status ${isDone ? 'done' : 'pending'}">${isDone ? 'Concluída' : 'Em andamento'}</span></div>
+            <div class="actions">
+              ${ !isDone ? `<button class="complete" data-id="${d.id}">Finalizar</button>` : '' }
+              <button class="edit" data-id="${d.id}">Editar</button>
+              <button class="delete" data-id="${d.id}">Excluir</button>
+            </div>
+          </div>
+        `;
+        grid.appendChild(div);
+      }
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'",'&#039;');
+    }
+
+    // ---------- Events (delegation) ----------
+    document.getElementById('grid').addEventListener('click', (ev)=>{
+      const btn = ev.target.closest('button');
+      if(!btn) return;
+      const id = Number(btn.dataset.id);
+      if(btn.classList.contains('delete')){
+        if(confirm('Deseja realmente excluir esta demanda?')){
+          demands = demands.filter(x=>x.id !== id);
+          save();
+        }
+        return;
+      }
+      if(btn.classList.contains('edit')){
+        const d = demands.find(x=>x.id === id);
+        if(!d) return;
+        // preencher formulário para editar
+        document.getElementById('title').value = d.title;
+        document.getElementById('description').value = d.description;
+        document.getElementById('type').value = d.type;
+        // convert iso to local datetime-local format (slice 0,16)
+        const v = d.receivedDate ? d.receivedDate.slice(0,16) : '';
+        document.getElementById('received').value = v;
+        editingId = id;
+        document.querySelector('#demandForm button[type="submit"]').textContent = 'Salvar alterações';
+        document.getElementById('cancelEditBtn').style.display = 'inline-block';
+        return;
+      }
+      if(btn.classList.contains('complete')){
+        // abrir modal para comentário
+        pendingCompleteId = id;
+        openModal();
+        return;
+      }
+    });
+
+    // ---------- Form submit (create / update) ----------
+    document.getElementById('demandForm').addEventListener('submit', (ev)=>{
+      ev.preventDefault();
+      const title = document.getElementById('title').value.trim();
+      const description = document.getElementById('description').value.trim();
+      const type = document.getElementById('type').value;
+      const received = document.getElementById('received').value;
+
+      if(!title || !description || !received){
+        alert('Preencha todos os campos.');
+        return;
+      }
+
+      if(editingId){
+        const d = demands.find(x=>x.id === editingId);
+        if(d){
+          d.title = title;
+          d.description = description;
+          d.type = type;
+          d.receivedDate = received;
+          // não mudar comment/completedDate aqui
+        }
+        editingId = null;
+        document.querySelector('#demandForm button[type="submit"]').textContent = 'Adicionar';
+        document.getElementById('cancelEditBtn').style.display = 'none';
+      } else {
+        const newD = {
+          id: nextId++,
+          title,
+          description,
+          type,
+          receivedDate: received,
+          completedDate: null,
+          comment: ''
+        };
+        demands.push(newD);
+      }
+
+      save();
+      ev.target.reset();
+    });
+
+    document.getElementById('cancelEditBtn').addEventListener('click', ()=>{
+      editingId = null;
+      document.querySelector('#demandForm button[type="submit"]').textContent = 'Adicionar';
+      document.getElementById('demandForm').reset();
+      document.getElementById('cancelEditBtn').style.display = 'none';
+    });
+
+    // ---------- Filters ----------
+    document.getElementById('filters').addEventListener('click', (ev)=>{
+      const btn = ev.target.closest('button');
+      if(!btn) return;
+      currentFilter = btn.dataset.filter;
+      document.querySelectorAll('#filters .filter-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderList();
+    });
+
+    // ---------- Modal ----------
+    const overlay = document.getElementById('overlay');
+    function openModal(){
+      document.getElementById('completeComment').value = '';
+      overlay.classList.add('open');
+      overlay.setAttribute('aria-hidden','false');
+      document.getElementById('completeComment').focus();
+    }
+    function closeModal(){
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden','true');
+      pendingCompleteId = null;
+    }
+    document.getElementById('cancelComplete').addEventListener('click', closeModal);
+    document.getElementById('confirmComplete').addEventListener('click', ()=>{
+      const comment = document.getElementById('completeComment').value.trim();
+      if(!comment){
+        alert('Comentário obrigatório para finalizar a tarefa.');
+        return;
+      }
+      const d = demands.find(x=>x.id === pendingCompleteId);
+      if(!d){
+        closeModal();
+        return;
+      }
+      d.completedDate = new Date().toISOString();
+      d.comment = comment;
+      save();
+      closeModal();
+    });
+
+    // ---------- View switching ----------
+    const appView = document.getElementById('appView');
+    const dashboardView = document.getElementById('dashboardView');
+    document.getElementById('openDashboardBtn').addEventListener('click', ()=> showView('dashboard'));
+    document.getElementById('openAppBtn').addEventListener('click', ()=> showView('app'));
+
+    function showView(name){
+      if(name === 'dashboard'){
+        appView.classList.remove('active');
+        dashboardView.classList.add('active');
+        if(!chartStatus) initCharts();
+        updateCharts();
+      } else {
+        dashboardView.classList.remove('active');
+        appView.classList.add('active');
+      }
+    }
+
+    // ---------- Charts ----------
+    function initCharts(){
+      const ctxStatus = document.getElementById('statusChart').getContext('2d');
+      chartStatus = new Chart(ctxStatus, {
+        type:'doughnut',
+        data:{
+          labels:['Concluídas','Pendentes'],
+          datasets:[{data:[0,0], backgroundColor:['#4CAF50','#FFC107']}]
+        },
+        options:{responsive:true,plugins:{legend:{position:'bottom'}}}
+      });
+
+      const ctxType = document.getElementById('typeChart').getContext('2d');
+      chartType = new Chart(ctxType, {
+        type:'pie',
+        data:{
+          labels:['Rotina','Esporádica'],
+          datasets:[{data:[0,0], backgroundColor:['#2196F3','#FF9800']}]
+        },
+        options:{responsive:true,plugins:{legend:{position:'bottom'}}}
+      });
+
+      const ctxHours = document.getElementById('hoursChart').getContext('2d');
+      chartHours = new Chart(ctxHours, {
+        type:'bar',
+        data:{
+          labels:['Rotina','Esporádica'],
+          datasets:[{label:'Horas totais',data:[0,0], backgroundColor:['#673AB7','#3F51B5']}]
+        },
+        options:{responsive:true,scales:{y:{beginAtZero:true}}}
+      });
+    }
+
+    function updateCharts(){
+      if(!chartStatus || !chartType || !chartHours) return;
+      // status
+      const completed = demands.filter(d=>d.completedDate).length;
+      const pending = demands.length - completed;
+
+      chartStatus.data.datasets[0].data = [completed, pending];
+      chartStatus.update();
+
+      // type counts
+      const rotina = demands.filter(d=>d.type === 'rotina').length;
+      const esporadica = demands.filter(d=>d.type === 'esporadica').length;
+      chartType.data.datasets[0].data = [rotina, esporadica];
+      chartType.update();
+
+      // hours per type
+      let hoursRotina = 0, hoursEspo = 0;
+      for(const d of demands){
+        const h = calculateWorkHours(d.receivedDate, d.completedDate || new Date());
+        if(d.type === 'rotina') hoursRotina += h;
+        else hoursEspo += h;
+      }
+      chartHours.data.datasets[0].data = [Number(hoursRotina.toFixed(2)), Number(hoursEspo.toFixed(2))];
+      chartHours.update();
+
+      // total count
+      document.getElementById('totalCount').textContent = demands.length;
+    }
+
+    // ---------- Routine recreation (once per load) ----------
+    function recreateRoutinesForToday(){
+      const today = new Date().toISOString().slice(0,10);
+      // para cada rotina concluída cujo completedDay < hoje, crie uma nova rotina se não existir com o mesmo título para hoje
+      const toAdd = [];
+      for(const d of demands){
+        if(d.type === 'rotina' && d.completedDate){
+          const completedDay = d.completedDate.slice(0,10);
+          if(completedDay < today){
+            const existsToday = demands.some(x => x.type === 'rotina' && x.title === d.title && x.receivedDate.slice(0,10) === today && !x._recreated);
+            if(!existsToday){
+              toAdd.push({
+                id: nextId++,
+                title: d.title,
+                description: d.description,
+                type: 'rotina',
+                receivedDate: new Date().toISOString(),
+                completedDate: null,
+                comment: '',
+                _recreated: true // marcador para evitar loop infinito; persistirá, mas será inofensivo -> Cuidado com as atualizações & manutenções futuras...
+              });
+            }
+          }
+        }
+      }
+      if(toAdd.length){
+        demands = demands.concat(toAdd);
+        save();
+      }
+    }
+
+    // ---------- Init ----------
+    function updateAll(){
+      renderList();
+      updateCharts();
+    }
+
+    // On load
+    document.addEventListener('DOMContentLoaded', ()=>{
+      // recriar rotinas primeiro (ele chamará save() e atualizará)
+      recreateRoutinesForToday();
+      renderList();
+      // gráficos init (mas só são criados ao abrir o painel — criamos aqui para que os gráficos existam mesmo se o usuário abrir imediatamente) => Melhor seguir dessa forma afins de melhorar a peformance
+      initCharts();
+      updateCharts();
+    });
+
+    // Segurança simples: atualize os gráficos quando o localStorage for alterado em outra guia -> Melhores práticas sempre arquivo devidamente separado por guias
+    window.addEventListener('storage', (ev)=>{
+      if(ev.key === STORAGE_KEY){
+        demands = JSON.parse(ev.newValue || '[]');
+        nextId = demands.length ? Math.max(...demands.map(d=>d.id)) + 1 : 1;
+        updateAll();
+      }
+    });
+  </script>
+</body>
+</html>
